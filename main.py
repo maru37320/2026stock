@@ -406,7 +406,7 @@ with tab2:
                     x=df_c.index, y=df_c["Close"].squeeze(),
                     line=dict(color=clr, width=2),
                     fill="tozeroy",
-                    fillcolor="#00f5a018" if is_up else "#ff4b6e18",
+                    fillcolor="rgba(0,245,160,0.09)" if is_up else "rgba(255,75,110,0.09)",
                     name=selected_stock,
                     hovertemplate="%{x|%Y-%m-%d}<br>종가: %{y:,.2f}<extra></extra>",
                 ), row=1, col=1)
