@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -8,7 +7,9 @@ st.set_page_config(page_title="Stock Comparison", layout="wide")
 
 st.title("📈 한국 vs 미국 주식 비교 웹앱")
 
-# 기본 종목 리스트
+# ---------------------------
+# 종목 리스트
+# ---------------------------
 korea_stocks = {
     "삼성전자": "005930.KS",
     "SK하이닉스": "000660.KS",
@@ -23,55 +24,92 @@ us_stocks = {
     "테슬라": "TSLA"
 }
 
+# ---------------------------
+# 사이드바
+# ---------------------------
 st.sidebar.header("종목 선택")
-selected_korea = st.sidebar.multiselect("한국 주식", list(korea_stocks.keys()), default=["삼성전자"])
-selected_us = st.sidebar.multiselect("미국 주식", list(us_stocks.keys()), default=["애플"])
 
-period = st.sidebar.selectbox("기간", ["1mo", "3mo", "6mo", "1y", "2y", "5y"], index=3)
+selected_korea = st.sidebar.multiselect(
+    "한국 주식",
+    list(korea_stocks.keys()),
+    default=["삼성전자"]
+)
 
+selected_us = st.sidebar.multiselect(
+    "미국 주식",
+    list(us_stocks.keys()),
+    default=["애플"]
+)
+
+period = st.sidebar.selectbox(
+    "기간",
+    ["1mo", "3mo", "6mo", "1y", "2y", "5y"],
+    index=3
+)
+
+# ---------------------------
+# 데이터 로딩 함수 (에러 해결 버전)
+# ---------------------------
 @st.cache_data
 def load_data(tickers, period):
-    data = yf.download(tickers, period=period)["Adj Close"]
+    data = yf.download(tickers, period=period, auto_adjust=True)
+
+    if data.empty:
+        return pd.DataFrame()
+
+    # MultiIndex 처리
+    if isinstance(data.columns, pd.MultiIndex):
+        data = data["Close"]
+
     return data
 
+# ---------------------------
 # 티커 변환
-selected_tickers = [korea_stocks[s] for s in selected_korea] + [us_stocks[s] for s in selected_us]
+# ---------------------------
+selected_tickers = (
+    [korea_stocks[s] for s in selected_korea] +
+    [us_stocks[s] for s in selected_us]
+)
 
+# ---------------------------
+# 메인 실행
+# ---------------------------
 if selected_tickers:
     data = load_data(selected_tickers, period)
 
-    # 수익률 계산
-    returns = (data / data.iloc[0] - 1) * 100
+    if data.empty:
+        st.error("데이터를 불러오지 못했습니다.")
+    else:
+        # 수익률 계산
+        returns = (data / data.iloc[0] - 1) * 100
 
-    st.subheader("📊 수익률 비교 (%)")
-    st.dataframe(returns.tail())
+        # ---------------------------
+        # 수익률 테이블
+        # ---------------------------
+        st.subheader("📊 수익률 (%)")
+        st.dataframe(returns.tail())
 
-    # 그래프
-    st.subheader("📉 주가 및 수익률 그래프")
-    fig, ax = plt.subplots()
+        # ---------------------------
+        # 그래프
+        # ---------------------------
+        st.subheader("📉 수익률 비교 그래프")
 
-    for col in returns.columns:
-        ax.plot(returns.index, returns[col], label=col)
+        fig, ax = plt.subplots()
 
-    ax.set_ylabel("Return (%)")
-    ax.legend()
+        for col in returns.columns:
+            ax.plot(returns.index, returns[col], label=col)
 
-    st.pyplot(fig)
+        ax.set_ylabel("Return (%)")
+        ax.legend()
+        ax.grid()
 
-    # 원본 가격 데이터
-    st.subheader("💰 원본 주가 데이터")
-    st.dataframe(data.tail())
+        st.pyplot(fig)
+
+        # ---------------------------
+        # 원본 데이터
+        # ---------------------------
+        st.subheader("💰 원본 주가 데이터")
+        st.dataframe(data.tail())
 
 else:
     st.warning("하나 이상의 종목을 선택해주세요.")
-
-
-# requirements.txt
-# 아래 내용을 requirements.txt 파일로 저장하세요
-
-"""
-streamlit
-yfinance
-pandas
-matplotlib
-"""
